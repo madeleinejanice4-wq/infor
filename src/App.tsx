@@ -399,34 +399,38 @@ export default function App() {
     try {
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
-        setTranslateOutput("Error: Translation service is not configured (API Key missing).");
+        setTranslateOutput("Error: API Key is missing. Please check your environment configuration.");
         setIsTranslating(false);
         return;
       }
       
       const ai = new GoogleGenAI({ apiKey });
       const prompt = translateMode === 'EN-ID' 
-        ? `Translate the following English text to Indonesian: "${translateInput}". Only return the translation.`
-        : `Translate the following Indonesian text to English: "${translateInput}". Only return the translation.`;
+        ? `Translate this English text to Indonesian. Return ONLY the translation: "${translateInput}"`
+        : `Translate this Indonesian text to English. Return ONLY the translation: "${translateInput}"`;
       
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-          systemInstruction: "You are a professional translator specializing in English and Indonesian. Provide accurate and natural translations. Do not include any explanations or extra text, just the translation itself.",
-          temperature: 0.3,
-        }
+        model: "gemini-2.0-flash",
+        contents: [{ parts: [{ text: prompt }] }]
       });
       
       if (response && response.text) {
         setTranslateOutput(response.text.trim());
       } else {
-        setTranslateOutput("Translation failed. The service returned an empty response.");
+        setTranslateOutput("Translation failed: Received an empty response from the AI.");
       }
     } catch (e) {
-      console.error("Translation failed", e);
-      const msg = e instanceof Error ? e.message : "Unknown error";
-      setTranslateOutput(`Error: Translation failed (${msg}). Please try again later.`);
+      console.error("Translation error:", e);
+      let errorMessage = "An unexpected error occurred.";
+      if (e instanceof Error) {
+        errorMessage = e.message;
+        if (errorMessage.includes("404") || errorMessage.includes("not found")) {
+          errorMessage = "Model not found or service unavailable.";
+        } else if (errorMessage.includes("403") || errorMessage.includes("API key")) {
+          errorMessage = "Invalid API Key or permission denied.";
+        }
+      }
+      setTranslateOutput(`Translation failed: ${errorMessage}`);
     } finally {
       setIsTranslating(false);
     }
