@@ -410,8 +410,8 @@ export default function App() {
         : `Translate the following Indonesian text to English: "${translateInput}". Only return the translation.`;
       
       const response = await ai.models.generateContent({
-        model: "gemini-flash-latest",
-        contents: [{ parts: [{ text: prompt }] }],
+        model: "gemini-3-flash-preview",
+        contents: prompt,
         config: {
           systemInstruction: "You are a professional translator specializing in English and Indonesian. Provide accurate and natural translations. Do not include any explanations or extra text, just the translation itself.",
           temperature: 0.3,
