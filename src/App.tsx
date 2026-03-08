@@ -93,6 +93,16 @@ const CINEMA_DATA = [
   }
 ];
 
+const COMMON_PHRASES = [
+  { en: "hello, what's up", id: "Halo, apa kabar?" },
+  { en: "excuse me, can you help me?", id: "Permisi, bisa bantu saya?" },
+  { en: "do you know how to go to this place?", id: "Apakah kamu tahu cara ke tempat ini?" },
+  { en: "do you know the solution if this happens?", id: "Apakah kamu tahu solusi jika terjadi ini?" },
+  { en: "you look stunning", id: "Kamu terlihat mempesona" },
+  { en: "i am sorry", id: "Saya minta maaf" },
+  { en: "thank you!", id: "Terima kasih!" }
+];
+
 // --- Components ---
 
 const Button = ({ children, onClick, className = "", variant = "primary", disabled = false, isDarkMode }: any) => {
@@ -392,49 +402,6 @@ export default function App() {
     setCurrentScreen('MAP');
   };
 
-  const handleTranslate = async () => {
-    if (!translateInput.trim()) return;
-    setIsTranslating(true);
-    setTranslateOutput("");
-    try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        setTranslateOutput("Error: API Key is missing. Please check your environment configuration.");
-        setIsTranslating(false);
-        return;
-      }
-      
-      const ai = new GoogleGenAI({ apiKey });
-      const prompt = translateMode === 'EN-ID' 
-        ? `Translate this English text to Indonesian. Return ONLY the translation: "${translateInput}"`
-        : `Translate this Indonesian text to English. Return ONLY the translation: "${translateInput}"`;
-      
-      const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: [{ parts: [{ text: prompt }] }]
-      });
-      
-      if (response && response.text) {
-        setTranslateOutput(response.text.trim());
-      } else {
-        setTranslateOutput("Translation failed: Received an empty response from the AI.");
-      }
-    } catch (e) {
-      console.error("Translation error:", e);
-      let errorMessage = "An unexpected error occurred.";
-      if (e instanceof Error) {
-        errorMessage = e.message;
-        if (errorMessage.includes("404") || errorMessage.includes("not found")) {
-          errorMessage = "Model not found or service unavailable.";
-        } else if (errorMessage.includes("403") || errorMessage.includes("API key")) {
-          errorMessage = "Invalid API Key or permission denied.";
-        }
-      }
-      setTranslateOutput(`Translation failed: ${errorMessage}`);
-    } finally {
-      setIsTranslating(false);
-    }
-  };
 
   // --- Renderers ---
 
@@ -1703,65 +1670,40 @@ export default function App() {
               <div className={`p-6 rounded-3xl border-2 mb-6 ${
                 isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-orange-50 shadow-sm'
               }`}>
-                <h3 className="text-lg font-black mb-1">Get to know Indonesians better! 🇮🇩</h3>
-                <p className="text-xs text-gray-500 mb-6">Learn local slang or translate your thoughts.</p>
+                <h3 className="text-lg font-black mb-1">Common Phrases 🇮🇩</h3>
+                <p className="text-xs text-gray-500 mb-6">Click a phrase to see its Indonesian translation.</p>
                 
-                <div className="flex items-center justify-between mb-4 p-2 bg-gray-100 dark:bg-gray-800 rounded-2xl">
-                  <button 
-                    onClick={() => setTranslateMode('EN-ID')}
-                    className={`flex-1 py-2 rounded-xl text-xs font-black transition-all ${
-                      translateMode === 'EN-ID' ? 'bg-white dark:bg-gray-700 shadow-sm text-orange-500' : 'text-gray-500'
-                    }`}
-                  >
-                    EN → ID
-                  </button>
-                  <button 
-                    onClick={() => setTranslateMode('ID-EN')}
-                    className={`flex-1 py-2 rounded-xl text-xs font-black transition-all ${
-                      translateMode === 'ID-EN' ? 'bg-white dark:bg-gray-700 shadow-sm text-orange-500' : 'text-gray-500'
-                    }`}
-                  >
-                    ID → EN
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 mb-1 block">Input Text</label>
-                    <textarea 
-                      value={translateInput}
-                      onChange={e => setTranslateInput(e.target.value)}
-                      placeholder={translateMode === 'EN-ID' ? "Type in English..." : "Ketik dalam Bahasa Indonesia..."}
-                      className={`w-full p-4 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-orange-500 h-32 resize-none text-sm ${
-                        isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'
-                      }`}
-                    />
-                  </div>
-
-                  <Button 
-                    isDarkMode={isDarkMode} 
-                    onClick={handleTranslate} 
-                    disabled={isTranslating || !translateInput.trim()}
-                    className="bg-orange-500 hover:bg-orange-600"
-                  >
-                    {isTranslating ? "Translating..." : "Translate Now"}
-                  </Button>
-
-                  {translateOutput && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`p-4 rounded-2xl border-2 ${
-                        isDarkMode ? 'bg-gray-800 border-orange-900/30' : 'bg-orange-50 border-orange-100'
+                <div className="space-y-3">
+                  {COMMON_PHRASES.map((phrase, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => {
+                        setTranslateInput(phrase.en);
+                        setTranslateOutput(phrase.id);
+                      }}
+                      className={`w-full p-4 rounded-2xl border text-left transition-all active:scale-[0.98] ${
+                        translateInput === phrase.en 
+                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' 
+                          : isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'
                       }`}
                     >
-                      <label className="text-[10px] font-black uppercase text-orange-500 mb-1 block">Result</label>
-                      <p className={`text-sm font-bold leading-relaxed ${isDarkMode ? 'text-white' : 'text-orange-900'}`}>
-                        {translateOutput}
-                      </p>
-                    </motion.div>
-                  )}
+                      <p className="text-xs font-black text-gray-400 uppercase mb-1">English</p>
+                      <p className="text-sm font-bold mb-2">{phrase.en}</p>
+                      
+                      {translateInput === phrase.en && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          className="pt-2 border-t border-orange-200 dark:border-orange-800"
+                        >
+                          <p className="text-[10px] font-black text-orange-500 uppercase mb-1">Indonesian</p>
+                          <p className="text-sm font-black text-orange-600 dark:text-orange-400">{phrase.id}</p>
+                        </motion.div>
+                      )}
+                    </button>
+                  ))}
                 </div>
+
               </div>
             </div>
           </motion.div>
