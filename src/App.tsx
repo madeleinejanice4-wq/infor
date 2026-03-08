@@ -76,21 +76,19 @@ type Screen =
 
 const CINEMA_DATA = [
   {
-    genre: 'Streaming Recommendations (Netflix, Disney+, etc.)',
+    genre: 'NOW PLAYING',
     movies: [
-      { title: 'Gadis Kretek (Cigarette Girl)', description: 'A sweeping cinematic drama about the history of clove cigarettes in Indonesia.' },
-      { title: 'The Big 4', description: 'Four retired assassins spring back into action when they cross paths with a straight-laced cop.' },
-      { title: 'Ali & Ratu Ratu Queens', description: 'A teenager travels to New York to find his estranged mother.' },
-      { title: '24 Hours with Gaspar', description: 'A detective with 24 hours to live follows a trail of clues to find his missing childhood friend.' },
-      { title: 'Kabut Berduri (Borderless Fog)', description: 'A detective investigates a series of gruesome murders along the Indonesia-Malaysia border.' }
+      { title: 'Juara Sejati', description: 'An inspiring story about an athlete\'s struggle to achieve their ultimate dream.' },
+      { title: 'Rumah Tanpa Cahaya', description: 'A mystery drama about a family uncovering dark secrets in their old home.' },
+      { title: 'Titip Bunda di Surga Mu', description: 'A touching story about a child\'s devotion to their late mother.' }
     ]
   },
   {
-    genre: 'Classic Indonesian Cinema',
+    genre: 'YOU CAN ALSO WATCH ON NETFLIX',
     movies: [
-      { title: 'Laskar Pelangi', description: 'The inspiring journey of students in a remote village in Belitung.' },
-      { title: 'Ada Apa Dengan Cinta?', description: 'A classic high school romance that defined a generation.' },
-      { title: 'The Raid: Redemption', description: 'A S.W.A.T. team becomes trapped in a tenement run by a ruthless mobster.' }
+      { title: 'Agak Laen', description: 'Four friends working as haunted house attendants at a night market must hide the body of a politician.' },
+      { title: 'Mencuri Raden Saleh', description: 'A group of students plans to steal a priceless painting from the Presidential Palace.' },
+      { title: 'Ali & Ratu Ratu Queens', description: 'A teenager travels to New York to find his long-lost mother.' }
     ]
   }
 ];
@@ -397,20 +395,38 @@ export default function App() {
   const handleTranslate = async () => {
     if (!translateInput.trim()) return;
     setIsTranslating(true);
+    setTranslateOutput("");
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        setTranslateOutput("Error: Translation service is not configured (API Key missing).");
+        setIsTranslating(false);
+        return;
+      }
+      
+      const ai = new GoogleGenAI({ apiKey });
       const prompt = translateMode === 'EN-ID' 
         ? `Translate the following English text to Indonesian: "${translateInput}". Only return the translation.`
         : `Translate the following Indonesian text to English: "${translateInput}". Only return the translation.`;
       
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
+        model: "gemini-flash-latest",
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+          systemInstruction: "You are a professional translator specializing in English and Indonesian. Provide accurate and natural translations. Do not include any explanations or extra text, just the translation itself.",
+          temperature: 0.3,
+        }
       });
-      setTranslateOutput(response.text || "Translation failed.");
+      
+      if (response && response.text) {
+        setTranslateOutput(response.text.trim());
+      } else {
+        setTranslateOutput("Translation failed. The service returned an empty response.");
+      }
     } catch (e) {
       console.error("Translation failed", e);
-      setTranslateOutput("Error: Translation failed. Please try again later.");
+      const msg = e instanceof Error ? e.message : "Unknown error";
+      setTranslateOutput(`Error: Translation failed (${msg}). Please try again later.`);
     } finally {
       setIsTranslating(false);
     }
@@ -761,7 +777,7 @@ export default function App() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setCurrentScreen('CINEMAS')}
-                  className={`p-4 rounded-3xl border-2 flex flex-col gap-3 shadow-md transition-all col-span-2 ${
+                  className={`p-4 rounded-3xl border-2 flex flex-col gap-3 shadow-md transition-all ${
                     isDarkMode 
                       ? 'bg-gray-900 border-purple-900 text-purple-400' 
                       : 'bg-white border-purple-50 text-purple-600'
@@ -771,8 +787,8 @@ export default function App() {
                     <Film size={20} />
                   </div>
                   <div className="text-left">
-                    <p className="font-black text-sm">Watch Movies?</p>
-                    <p className="text-[10px] opacity-70">Cinemas in Jakarta</p>
+                    <p className="font-black text-sm">Entertainment?</p>
+                    <p className="text-[10px] opacity-70">Entertainment in Jakarta</p>
                   </div>
                 </motion.button>
 
@@ -780,7 +796,7 @@ export default function App() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setCurrentScreen('TRANSLATE')}
-                  className={`p-4 rounded-3xl border-2 flex flex-col gap-3 shadow-md transition-all col-span-2 ${
+                  className={`p-4 rounded-3xl border-2 flex flex-col gap-3 shadow-md transition-all ${
                     isDarkMode 
                       ? 'bg-gray-900 border-orange-900 text-orange-400' 
                       : 'bg-white border-orange-50 text-orange-600'
@@ -790,8 +806,8 @@ export default function App() {
                     <Languages size={20} />
                   </div>
                   <div className="text-left">
-                    <p className="font-black text-sm">Get to know Indonesians better! 🇮🇩</p>
-                    <p className="text-[10px] opacity-70">Translator English-Indo</p>
+                    <p className="font-black text-sm">Translator</p>
+                    <p className="text-[10px] opacity-70">EN ↔ ID</p>
                   </div>
                 </motion.button>
               </div>
@@ -1600,11 +1616,37 @@ export default function App() {
             exit={{ opacity: 0, x: -20 }}
             className="pb-24"
           >
-            {renderHeader("Cinemas in Jakarta")}
+            {renderHeader("Entertainment in Jakarta")}
             
             <div className="p-6 space-y-8">
+              <div className={`p-5 rounded-3xl border-2 ${
+                isDarkMode ? 'bg-gray-900 border-purple-900/30' : 'bg-purple-50 border-purple-100 shadow-sm'
+              }`}>
+                <h3 className="text-lg font-black mb-1 text-purple-600">Film Recommendations 🎬</h3>
+                <p className="text-xs text-gray-500 mb-4">Check out these top picks for your movie night.</p>
+                
+                {CINEMA_DATA.map((group, idx) => (
+                  <div key={idx} className="mb-6 last:mb-0">
+                    <h4 className="text-sm font-black uppercase tracking-widest text-purple-500 mb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                      {group.genre}
+                    </h4>
+                    <div className="space-y-3">
+                      {group.movies.map((movie, mIdx) => (
+                        <div key={mIdx} className={`p-4 rounded-2xl border ${
+                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100 shadow-sm'
+                        }`}>
+                          <p className="font-bold text-sm mb-1">{movie.title}</p>
+                          <p className="text-[10px] opacity-60 leading-tight">{movie.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               <div>
-                <h3 className="text-lg font-black mb-4">Cinema Locations</h3>
+                <h3 className="text-lg font-black mb-4">Entertainment Locations</h3>
                 <div className="space-y-4">
                   {JAKARTA_CINEMAS.map(cinema => (
                     <Card key={cinema.id} isDarkMode={isDarkMode} className="flex gap-4 p-3">
@@ -1633,35 +1675,9 @@ export default function App() {
                 </div>
               </div>
 
-              <div className={`p-5 rounded-3xl border-2 ${
-                isDarkMode ? 'bg-gray-900 border-purple-900/30' : 'bg-purple-50 border-purple-100 shadow-sm'
-              }`}>
-                <h3 className="text-lg font-black mb-1 text-purple-600">Indonesian Film Recommendations 🎬</h3>
-                <p className="text-xs text-gray-500 mb-4">Watch these on Netflix, Disney+ Hotstar, or Prime Video.</p>
-                
-                {CINEMA_DATA.map((group, idx) => (
-                  <div key={idx} className="mb-6 last:mb-0">
-                    <h4 className="text-sm font-black uppercase tracking-widest text-purple-500 mb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      {group.genre}
-                    </h4>
-                    <div className="space-y-3">
-                      {group.movies.map((movie, mIdx) => (
-                        <div key={mIdx} className={`p-4 rounded-2xl border ${
-                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100 shadow-sm'
-                        }`}>
-                          <p className="font-bold text-sm mb-1">{movie.title}</p>
-                          <p className="text-[10px] opacity-60 leading-tight">{movie.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
               <div className={`p-4 rounded-2xl border text-center ${isDarkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-gray-50 border-gray-100'}`}>
                 <p className="text-[10px] text-gray-500 italic">
-                  * Cinema schedules may vary. Streaming availability depends on your region.
+                  * Cinema schedules and movie availability may vary by location.
                 </p>
               </div>
             </div>
